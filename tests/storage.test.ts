@@ -1,0 +1,20 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import {PGlite} from '@electric-sql/pglite';
+import {postgresStore} from '../lib/progress-store';
+import {addReview,mergeStates} from '../app/study/sync';
+import {empty} from '../app/study/core';
+test('Postgres compare-and-swap handles two devices and survives independent store objects',async()=>{
+ const db=new PGlite();const query=async(sql:string,params:unknown[]=[])=>{const result=await db.query(sql,params);return result.rows as Record<string,unknown>[]};
+ const pc=postgresStore(query),phone=postgresStore(query);
+ assert.equal((await pc.read()).revision,0);
+ const t=Date.now(),a=addReview(empty,{id:'pc',item:'v1-0',at:t,ok:true,rating:2}),b=addReview(empty,{id:'phone',item:'v1-0',at:t+1,ok:false,rating:0});
+ assert.equal(await pc.write(a,0),1);assert.equal(await phone.write(b,0),null);
+ const cloud=await phone.read();assert.equal(cloud.revision,1);
+ const combined=mergeStates(b,cloud.state!);assert.equal(await phone.write(combined,cloud.revision),2);
+ assert.equal(await pc.write(a,1),null);
+ const restarted=postgresStore(query),saved=await restarted.read();assert.equal(saved.state!.history[0].total,2);assert.equal(saved.state!.reviews['v1-0'].seen,2);
+ const noted=mergeStates(saved.state!,saved.state!);noted.notes['sample']="'; DROP TABLE kotoba_progress; --";
+ assert.equal(await restarted.write(noted,2),3);assert.equal((await pc.read()).state!.notes.sample,noted.notes.sample);
+ await db.close();
+});
