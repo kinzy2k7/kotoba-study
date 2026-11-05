@@ -1,3 +1,5 @@
+> **Bản cập nhật:** gói hiện tại không chứa các file khóa/mật khẩu điền sẵn được nhắc trong hướng dẫn cũ bên dưới. Dùng biến môi trường đang có trên Vercel hoặc tạo từ `.env.example`. Xem `HUONG_DAN_CAP_NHAT.md` để triển khai bản mới.
+
 # Đưa Kotoba lên Vercel và học trên cả máy tính, điện thoại
 
 ## 1. Đưa mã nguồn lên GitHub

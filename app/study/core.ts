@@ -10,4 +10,15 @@ export const titles=['','Làm quen','Đồ vật quanh ta','Nơi chốn','Thời
 export const day=()=>new Date().toLocaleDateString('en-CA',{timeZone:'Asia/Ho_Chi_Minh'});
 export function shuffle<T>(a:T[]){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b;}
 export const norm=(s:string)=>s.normalize('NFKC').replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-96)).replace(/[\s。、「」！!？?\[\]［］（）()～〜~・－—―-]/g,'').toLowerCase();
-export function validState(x:unknown):x is StudyState{const s=x as StudyState;return !!s&&typeof s==='object'&&!!s.reviews&&typeof s.reviews==='object'&&Object.values(s.reviews).every(r=>typeof r.due==='number'&&Number.isFinite(r.due)&&Number.isFinite(r.seen)&&Number.isFinite(r.interval)&&Number.isFinite(r.wrong))&&Array.isArray(s.stars)&&s.stars.every(v=>typeof v==='string')&&Array.isArray(s.history)&&s.history.every(h=>typeof h.date==='string'&&Number.isFinite(h.total)&&Number.isFinite(h.correct))&&!!s.notes&&typeof s.notes==='object'&&Object.values(s.notes).every(n=>typeof n==='string')&&Number.isFinite(s.goal)&&s.goal>0&&s.goal<=500;}
+export function isRecord(x:unknown):x is Record<string,unknown>{return !!x&&typeof x==='object'&&!Array.isArray(x);}
+export function validReview(x:unknown):x is Review {
+ if(!isRecord(x))return false;
+ return typeof x.due==='number'&&Number.isFinite(x.due)&&typeof x.interval==='number'&&Number.isFinite(x.interval)&&x.interval>=0&&Number.isInteger(x.seen)&&Number(x.seen)>=0&&Number.isInteger(x.wrong)&&Number(x.wrong)>=0&&Number(x.wrong)<=Number(x.seen);
+}
+export function validHistory(x:unknown):boolean {
+ return Array.isArray(x)&&x.every(h=>isRecord(h)&&typeof h.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(h.date)&&Number.isInteger(h.total)&&Number(h.total)>=0&&Number.isInteger(h.correct)&&Number(h.correct)>=0&&Number(h.correct)<=Number(h.total))&&new Set(x.map(h=>h.date)).size===x.length;
+}
+export function validState(x:unknown):x is StudyState {
+ if(!isRecord(x))return false;
+ return isRecord(x.reviews)&&Object.values(x.reviews).every(validReview)&&Array.isArray(x.stars)&&x.stars.every(v=>typeof v==='string'&&v.length<160)&&new Set(x.stars).size===x.stars.length&&validHistory(x.history)&&isRecord(x.notes)&&Object.values(x.notes).every(n=>typeof n==='string'&&n.length<=10000)&&typeof x.goal==='number'&&Number.isFinite(x.goal)&&x.goal>0&&x.goal<=500&&typeof x.dark==='boolean';
+}
